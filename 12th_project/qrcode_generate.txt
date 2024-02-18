@@ -1,0 +1,51 @@
+from google.colab import files
+import pandas as pd
+import qrcode
+import os
+import shutil
+
+# Step 1: Upload CSV file
+uploaded = files.upload()
+
+# Step 2: Read the dataset from the uploaded CSV file
+uploaded_filename = list(uploaded.keys())[0]
+df = pd.read_csv(uploaded_filename)
+
+# Step 3: Create a folder to store the QR codes
+output_folder = 'qrcodes'
+os.makedirs(output_folder, exist_ok=True)
+
+# Step 4: Generate QR codes for each row in the dataset and save them
+for index, row in df.iterrows():
+    item_code = row['Item']
+    qrcode_data = f"Item: {item_code}\nPrice: {row['Price']}\nQuantity: {row['Quantity']}"
+
+    # Create QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(qrcode_data)
+    qr.make(fit=True)
+
+    # Create an image from the QR Code instance
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    # Save the QR code image to the folder
+    img.save(os.path.join(output_folder, f'qrcode_item_{item_code}.png'))
+
+# Step 5: Add a new column in the dataset with the QR code filenames
+df['QRCodeFileName'] = [f'qrcode_item_{item_code}.png' for item_code in df['Item']]
+
+# Step 6: Save the updated dataset to a CSV file
+updated_dataset_filepath = 'updated_dataset.csv'
+df.to_csv(updated_dataset_filepath, index=False)
+
+# Step 7: Create a zip file containing all QR code images
+shutil.make_archive(output_folder, 'zip', output_folder)
+
+# Step 8: Download the updated dataset and the zip file containing QR code images
+files.download(updated_dataset_filepath)
+files.download('qrcodes.zip')
